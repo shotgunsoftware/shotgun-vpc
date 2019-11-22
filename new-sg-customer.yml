@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  Create the required secure infrastructure for a customer to connect to Autodesk Shotgun.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Customer Configuration
+        Parameters:
+          - CustomerBucketName
+      - Label:
+          default: Shotgun Configuration
+        Parameters:
+          - ShotgunHostedSiteURL
+    ParameterLabels:
+      CustomerBucketName:
+        default: Customer S3 Bucket Name
+      ShotgunHostedSiteURL:
+        default: Shotgun Hosted Site URL
+Parameters:
+  CustomerBucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Bucket name can include numbers, lowercase letters, uppercase letters, and hyphens. It
+      cannot start of end with a hyphen (-).
+    Description: S3 Bucket where Shotgun stuff will be stored
+    Type: String
+  ShotgunHostedSiteURL:
+    Description: URL of the Shotgun hosted site
+    Type: String
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders: ['*']
+          AllowedOrigins: [!Ref 'ShotgunHostedSiteURL']
+          AllowedMethods: [GET, PUT, HEAD]
+          ExposedHeaders: [ETag]
+          Id: HostedSiteRuleId
+          MaxAge: '3600'
+Outputs:
+  BucketName:
+    Value: !Ref 'S3Bucket'
+    Description: Name of the sample Amazon S3 bucket with CORS enabled.
