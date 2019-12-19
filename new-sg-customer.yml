@@ -24,9 +24,40 @@ Parameters:
     Description: S3 Bucket where Shotgun stuff will be stored
     Type: String
   ShotgunHostedSiteURL:
-    Description: URL of the Shotgun hosted site
+    Description: URL of the Shotgun hosted site, for eample https://mysite.shotgunstudio.com
     Type: String
+    Default: https://<your-site>.shotgunstudio.com
 Resources:
+  SGAllowedS3AccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: shotgun-bucket-access-policy
+      PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+              - s3:AbortMultipartUpload
+              - s3:GetObject
+              - s3:GetObjectAcl
+              - s3:ListMultipartUploadParts
+              - s3:PutObject
+              Resource: !Sub 'arn:aws:s3:::${CustomerBucketName}/*'
+              Effect: Allow
+      Roles:
+        - !Ref 'SGCrossAccountRole'
+  SGCrossAccountRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              "AWS":
+                - "arn:aws:iam::468106423547:role/cos_ctr_shotgun-p-ue1-db"
+                - "arn:aws:iam::468106423547:role/cos_ctr_shotgun-p-ue1-wa"
+                - "arn:aws:iam::468106423547:role/cos_ctr_shotts-p-ue1"
+            Action: "sts:AssumeRole"
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -35,6 +66,7 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      BucketName: !Ref CustomerBucketName
       CorsConfiguration:
         CorsRules:
         - AllowedHeaders: ['*']
@@ -42,7 +74,7 @@ Resources:
           AllowedMethods: [GET, PUT, HEAD]
           ExposedHeaders: [ETag]
           Id: HostedSiteRuleId
-          MaxAge: '3600'
+          MaxAge: '3000'
 Outputs:
   BucketName:
     Value: !Ref 'S3Bucket'
