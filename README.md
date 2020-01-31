@@ -1,7 +1,5 @@
-# shotgun-vpc
+# Shotgun Private Cloud AWS CloudFormation templates
 
-Shotgun Private Cloud cloudformation repository
-
-| Resource      |
+| Template      |
 | ------------- |
 | [Private S3 bucket](./sg-private-s3-bucket.yml) |
