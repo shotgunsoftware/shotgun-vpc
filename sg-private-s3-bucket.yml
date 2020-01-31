@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description:  Create the required secure infrastructure for a customer to connect to Autodesk Shotgun.
+Description:  Create the AWS S3 bucket for a customer to connect to Autodesk Shotgun.
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
