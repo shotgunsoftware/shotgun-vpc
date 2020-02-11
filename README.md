@@ -3,3 +3,4 @@
 | Template      |
 | ------------- |
 | [Private S3 bucket](./sg-private-s3-bucket.yml) |
+| [S3 proxy](./sg-s3-proxy.yml) |
