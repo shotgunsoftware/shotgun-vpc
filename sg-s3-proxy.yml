@@ -23,9 +23,8 @@ Parameters:
     Description: A name for the service
   ImageUrl:
     Type: String
-    Default: quay.io/shotgun/s3-proxy:1.0.0
-    Description: The url of a docker image that contains the application process that
-                 will handle the traffic for this service
+    Default: ""
+    Description: The url of the S3 proxy docker image.
   ContainerPort:
     Type: Number
     Default: 80
