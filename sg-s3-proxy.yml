@@ -8,11 +8,11 @@ Parameters:
   PrivateSubnetOne:
     Type: String
     Default: ""
-    Description: PrivateSubnetOne
+    Description: Private Subnet ID
   PrivateSubnetTwo:
     Type: String
     Default: ""
-    Description: PrivateSubnetTwo
+    Description: Private Subnet ID
   S3BucketName:
     Type: String
     Default: ""
@@ -111,7 +111,11 @@ Resources:
       LoadBalancerArn: !Ref 'PrivateLoadBalancer'
       Port: 80
       Protocol: HTTP
-  
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName:  !Join ['/', ['/ecs', !Ref 'ServiceName']]
+      RetentionInDays: 30
 
   FargateContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -175,6 +179,12 @@ Resources:
               Value: !Ref 'S3BucketName'
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              'awslogs-region': !Ref 'AWS::Region'
+              'awslogs-group': !Join ['/', ['/ecs', !Ref 'ServiceName']]
+              'awslogs-stream-prefix': 'ecs'
 
   # The service. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
@@ -212,7 +222,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /
+      HealthCheckPath: /ping
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
