@@ -22,9 +22,13 @@ Parameters:
     Type: String
     Default: s3-proxy
     Description: A name for the service
-  ImageUrl:
+  ImageRepository:
     Type: String
-    Description: The url of the S3 proxy docker image.
+    Description: The S3 proxy repository URI.
+  ImageTag:
+    Type: String
+    Default: "1.0.6"
+    Description: The Docker image tag of the S3 proxy.
   ContainerPort:
     Type: Number
     Default: 80
@@ -173,7 +177,7 @@ Resources:
         - Name: !Ref 'ServiceName'
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
-          Image: !Ref 'ImageUrl'
+          Image: !Join [':', [!Ref ImageRepository, !Ref 'ImageTag']]
           Environment:
             - Name: S3_BUCKET
               Value: !Ref 'S3BucketName'
