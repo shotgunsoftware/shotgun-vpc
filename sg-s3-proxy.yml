@@ -41,18 +41,6 @@ Parameters:
     Type: Number
     Default: 512
     Description: How much memory in megabytes to give the container
-  Path:
-    Type: String
-    Default: "*"
-    Description: A path on the public load balancer that this service
-                 should be connected to. Use * to send all load balancer
-                 traffic to this service.
-  Priority:
-    Type: Number
-    Default: 1
-    Description: The priority for the routing rule added to the load balancer.
-                 This only applies if your have multiple services which have been
-                 assigned to different paths on the load balancer.
   DesiredCount:
     Type: Number
     Default: 2
@@ -110,7 +98,7 @@ Resources:
       - PrivateLoadBalancer
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref 'DummyTargetGroupPrivate'
+        - TargetGroupArn: !Ref 'TargetGroup'
           Type: 'forward'
       LoadBalancerArn: !Ref 'PrivateLoadBalancer'
       Port: 80
@@ -195,7 +183,7 @@ Resources:
   # as monitor the number of running tasks and replace any that have crashed
   Service:
     Type: AWS::ECS::Service
-    DependsOn: LoadBalancerRule
+    DependsOn: TargetGroup
     Properties:
       ServiceName: !Ref 'ServiceName'
       Cluster: !Ref 'ECSCluster'
@@ -236,16 +224,3 @@ Resources:
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !Ref 'VPC'
-
-  # Create a rule on the load balancer for routing traffic to the target group
-  LoadBalancerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      Actions:
-        - TargetGroupArn: !Ref 'TargetGroup'
-          Type: 'forward'
-      Conditions:
-        - Field: path-pattern
-          Values: [!Ref 'Path']
-      ListenerArn: !Ref 'PrivateLoadBalancerListener'
-      Priority: !Ref 'Priority'
