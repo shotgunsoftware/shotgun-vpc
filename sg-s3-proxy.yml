@@ -2,18 +2,13 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy an S3 proxy service on AWS Fargate, hosted in a private subnet, and accessible via a private load balancer.
 Parameters:
   VPC:
-    Type: String
-    Default: ""
+    Type: AWS::EC2::VPC::Id
     Description: VPC Id
   PrivateSubnetOne:
-    AllowedPattern: "^subnet-[0-9a-f]*$"
-    ConstraintDescription: A valid Subnet ID, start with subnet-.
-    Type: String
+    Type: AWS::EC2::Subnet::Id
     Description: First private Subnet ID
   PrivateSubnetTwo:
-    AllowedPattern: "^subnet-[0-9a-f]*$"
-    ConstraintDescription: A valid Subnet ID, start with subnet-.
-    Type: String
+    Type: AWS::EC2::Subnet::Id
     Description: Second private Subnet ID
   S3BucketName:
     Type: String
