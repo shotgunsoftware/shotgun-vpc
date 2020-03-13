@@ -25,6 +25,12 @@ Mappings:
       CIDR: '10.100.2.0/24'
     PrivateTwo:
       CIDR: '10.100.3.0/24'
+Parameters:
+  ShotgunPrivateServiceName:
+    Description: "OPTIONAL: Shotgun private service name for your AWS region if needed."
+    Type: String
+Conditions:
+  CreateShotgunEndpoint: !Not [ !Equals [ !Ref ShotgunPrivateServiceName, "" ]]
 Resources:
   # VPC in which containers will be networked.
   # It has two private subnets.
@@ -179,6 +185,29 @@ Resources:
       VpcEndpointType: Interface
       VpcId: !Ref VPC
 
+  ShotgunEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateShotgunEndpoint
+    Properties: 
+      PolicyDocument: '{
+          "Statement": [
+              {
+                  "Action": "*",
+                  "Effect": "Allow",
+                  "Resource": "*",
+                  "Principal": "*"
+              }
+          ]
+        }'
+      PrivateDnsEnabled: false
+      SecurityGroupIds: 
+        - !Ref EndpointSecurityGroup
+      ServiceName: !Ref ShotgunPrivateServiceName
+      SubnetIds: 
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
 Outputs:
   VPCId:
     Description: The ID of the VPC that this stack is deployed in
