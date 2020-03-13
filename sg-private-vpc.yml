@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This stack deploys a private VPC needed for Shotgun Virtual Cloud.
+Mappings:
+  # Hard values for the subnet masks. These masks define
+  # the range of internal IP addresses that can be assigned.
+  # The VPC can have all IP's from 10.100.0.0 to 10.100.255.255
+  # There are four subnets which cover the ranges:
+  #
+  # 10.100.0.0 - 10.100.0.255
+  # 10.100.1.0 - 10.100.1.255
+  # 10.100.2.0 - 10.100.2.255
+  # 10.100.3.0 - 10.100.3.255
+  #
+  # If you need more IP addresses (perhaps you have so many
+  # instances that you run out) then you can customize these
+  # ranges to add more
+  SubnetConfig:
+    VPC:
+      CIDR: '10.100.0.0/16'
+    PublicOne:
+      CIDR: '10.100.0.0/24'
+    PublicTwo:
+      CIDR: '10.100.1.0/24'
+    PrivateOne:
+      CIDR: '10.100.2.0/24'
+    PrivateTwo:
+      CIDR: '10.100.3.0/24'
+Resources:
+  # VPC in which containers will be networked.
+  # It has two private subnets.
+  # We distribute the subnets across the first two available subnets
+  # for the region, for high availability.
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+      Tags:
+        - Key: Name
+          Value: !Ref 'AWS::StackName'
+
+  # Two private subnets where containers will only have private
+  # IP addresses, and will only be reachable by other members of the
+  # VPC
+  PrivateSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+         Fn::Select:
+         - 0
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      VpcId: !Ref 'VPC'
+      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateOne', 'CIDR']
+  PrivateSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+         Fn::Select:
+         - 1
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      VpcId: !Ref 'VPC'
+      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateTwo', 'CIDR']
+
+  # Setup networking resources for the private subnets.
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+  PrivateRouteTableOneAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetOne
+  PrivateRouteTableTwoAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetTwo
+
+  # VPC EndPoint
+  EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to VPC Endpoint
+      VpcId: !Ref 'VPC'
+  EndpointSecurityGroupIngressFromVPC:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from VPC
+      GroupId: !Ref 'EndpointSecurityGroup'
+      IpProtocol: -1
+      CidrIp: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument: '{
+        "Statement": [
+            {
+                "Action": "*",
+                "Effect": "Allow",
+                "Resource": "*",
+                "Principal": "*"
+            }
+        ]
+      }'
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !Ref VPC
+
+  ECRApiEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties: 
+      PolicyDocument: '{
+          "Statement": [
+              {
+                  "Action": "*",
+                  "Effect": "Allow",
+                  "Resource": "*",
+                  "Principal": "*"
+              }
+          ]
+        }'
+      PrivateDnsEnabled: true
+      SecurityGroupIds: 
+        - !Ref EndpointSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      SubnetIds: 
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+
+  ECRDkrEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties: 
+      PolicyDocument: '{
+          "Statement": [
+              {
+                  "Action": "*",
+                  "Effect": "Allow",
+                  "Resource": "*",
+                  "Principal": "*"
+              }
+          ]
+        }'
+      PrivateDnsEnabled: true
+      SecurityGroupIds: 
+        - !Ref EndpointSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      SubnetIds: 
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+
+  LogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties: 
+      PolicyDocument: '{
+          "Statement": [
+              {
+                  "Action": "*",
+                  "Effect": "Allow",
+                  "Resource": "*",
+                  "Principal": "*"
+              }
+          ]
+        }'
+      PrivateDnsEnabled: true
+      SecurityGroupIds: 
+        - !Ref EndpointSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      SubnetIds: 
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+
+Outputs:
+  VPCId:
+    Description: The ID of the VPC that this stack is deployed in
+    Value: !Ref 'VPC'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'VPCId' ] ]
+  PrivateSubnetOne:
+    Description: Private subnet one
+    Value: !Ref 'PrivateSubnetOne'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetOne' ] ]
+  PrivateSubnetTwo:
+    Description: Private subnet two
+    Value: !Ref 'PrivateSubnetTwo'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetTwo' ] ]
