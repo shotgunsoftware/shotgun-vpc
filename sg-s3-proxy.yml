@@ -13,10 +13,6 @@ Parameters:
   S3BucketName:
     Type: String
     Description: The name of your S3 bucket            
-  ServiceName:
-    Type: String
-    Default: s3-proxy
-    Description: A name for the service
   ImageRepository:
     Type: String
     Description: The S3 proxy repository URI.
@@ -72,21 +68,6 @@ Resources:
         - !Ref PrivateSubnetOne
         - !Ref PrivateSubnetTwo
       SecurityGroups: [!Ref 'PrivateLoadBalancerSG']
-  # This dummy target group is used to setup the ALB to just drop traffic
-  # initially, before any real service target groups have been added.
-  DummyTargetGroupPrivate:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
-      Name: !Join ['-', [!Ref 'AWS::StackName', 'drop-2']]
-      Port: 80
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      VpcId: !Ref 'VPC'
   PrivateLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
@@ -101,7 +82,7 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
-      LogGroupName:  !Join ['/', ['/ecs', !Ref 'ServiceName']]
+      LogGroupName:  !Join ['/', ['/ecs', !Ref 'AWS::StackName']]
       RetentionInDays: 30
 
   FargateContainerSecurityGroup:
@@ -149,7 +130,7 @@ Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Ref 'ServiceName'
+      Family: !Ref 'AWS::StackName'
       Cpu: !Ref 'ContainerCpu'
       Memory: !Ref 'ContainerMemory'
       NetworkMode: awsvpc
@@ -157,7 +138,7 @@ Resources:
         - FARGATE
       ExecutionRoleArn: !Ref 'ECSTaskExecutionRole'
       ContainerDefinitions:
-        - Name: !Ref 'ServiceName'
+        - Name: !Ref 'AWS::StackName'
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
           Image: !Join [':', [!Ref ImageRepository, !Ref 'ImageTag']]
@@ -170,7 +151,7 @@ Resources:
             LogDriver: awslogs
             Options:
               'awslogs-region': !Ref 'AWS::Region'
-              'awslogs-group': !Join ['/', ['/ecs', !Ref 'ServiceName']]
+              'awslogs-group': !Join ['/', ['/ecs', !Ref 'AWS::StackName']]
               'awslogs-stream-prefix': 'ecs'
 
   # The service. The service is a resource which allows you to run multiple
@@ -178,9 +159,11 @@ Resources:
   # as monitor the number of running tasks and replace any that have crashed
   Service:
     Type: AWS::ECS::Service
-    DependsOn: TargetGroup
+    DependsOn:
+      - TargetGroup
+      - PrivateLoadBalancerListener
     Properties:
-      ServiceName: !Ref 'ServiceName'
+      ServiceName: !Ref 'AWS::StackName'
       Cluster: !Ref 'ECSCluster'
       LaunchType: FARGATE
       DeploymentConfiguration:
@@ -196,7 +179,7 @@ Resources:
             - !Ref 'PrivateSubnetTwo'
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
-        - ContainerName: !Ref 'ServiceName'
+        - ContainerName: !Ref 'AWS::StackName'
           ContainerPort: !Ref 'ContainerPort'
           TargetGroupArn: !Ref 'TargetGroup'
 
@@ -214,7 +197,7 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
       TargetType: ip
-      Name: !Ref 'ServiceName'
+      Name: !Ref 'AWS::StackName'
       Port: !Ref 'ContainerPort'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
