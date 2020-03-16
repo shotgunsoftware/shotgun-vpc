@@ -4,12 +4,10 @@ Mappings:
   # Hard values for the subnet masks. These masks define
   # the range of internal IP addresses that can be assigned.
   # The VPC can have all IP's from 10.100.0.0 to 10.100.255.255
-  # There are four subnets which cover the ranges:
+  # There are two subnets which cover the ranges:
   #
   # 10.100.0.0 - 10.100.0.255
   # 10.100.1.0 - 10.100.1.255
-  # 10.100.2.0 - 10.100.2.255
-  # 10.100.3.0 - 10.100.3.255
   #
   # If you need more IP addresses (perhaps you have so many
   # instances that you run out) then you can customize these
@@ -17,15 +15,17 @@ Mappings:
   SubnetConfig:
     VPC:
       CIDR: '10.100.0.0/16'
-    PublicOne:
-      CIDR: '10.100.0.0/24'
-    PublicTwo:
-      CIDR: '10.100.1.0/24'
     PrivateOne:
-      CIDR: '10.100.2.0/24'
+      CIDR: '10.100.0.0/24'
     PrivateTwo:
-      CIDR: '10.100.3.0/24'
+      CIDR: '10.100.1.0/24'
 Parameters:
+  CustomerBucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Bucket name can include numbers, lowercase letters, uppercase letters, and hyphens. It
+      cannot start of end with a hyphen (-).
+    Description: The existing S3 Bucket where Shotgun media will be stored.
+    Type: String
   ShotgunPrivateServiceName:
     Description: "OPTIONAL: Shotgun private service name for your AWS region if needed."
     Type: String
@@ -58,6 +58,9 @@ Resources:
          - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref 'VPC'
       CidrBlock: !FindInMap ['SubnetConfig', 'PrivateOne', 'CIDR']
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [ !Ref 'AWS::StackName', "PrivateSubnetOne" ]]
   PrivateSubnetTwo:
     Type: AWS::EC2::Subnet
     Properties:
@@ -67,6 +70,9 @@ Resources:
          - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref 'VPC'
       CidrBlock: !FindInMap ['SubnetConfig', 'PrivateTwo', 'CIDR']
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [ !Ref 'AWS::StackName', "PrivateSubnetTwo" ]]
 
   # Setup networking resources for the private subnets.
   PrivateRouteTable:
@@ -101,12 +107,16 @@ Resources:
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
-      PolicyDocument: '{
+      PolicyDocument: !Sub '{
+        "Version": "2012-10-17",
         "Statement": [
             {
                 "Action": "*",
                 "Effect": "Allow",
-                "Resource": "*",
+                "Resource": [
+                  "arn:aws:s3:::${CustomerBucketName}/*",
+                  "arn:aws:s3:::prod-${AWS::Region}-starport-layer-bucket/*"
+                ],
                 "Principal": "*"
             }
         ]
@@ -115,20 +125,9 @@ Resources:
         - !Ref PrivateRouteTable
       ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
       VpcId: !Ref VPC
-
   ECRApiEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties: 
-      PolicyDocument: '{
-          "Statement": [
-              {
-                  "Action": "*",
-                  "Effect": "Allow",
-                  "Resource": "*",
-                  "Principal": "*"
-              }
-          ]
-        }'
       PrivateDnsEnabled: true
       SecurityGroupIds: 
         - !Ref EndpointSecurityGroup
@@ -138,20 +137,9 @@ Resources:
         - !Ref PrivateSubnetTwo
       VpcEndpointType: Interface
       VpcId: !Ref VPC
-
   ECRDkrEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties: 
-      PolicyDocument: '{
-          "Statement": [
-              {
-                  "Action": "*",
-                  "Effect": "Allow",
-                  "Resource": "*",
-                  "Principal": "*"
-              }
-          ]
-        }'
       PrivateDnsEnabled: true
       SecurityGroupIds: 
         - !Ref EndpointSecurityGroup
@@ -161,20 +149,9 @@ Resources:
         - !Ref PrivateSubnetTwo
       VpcEndpointType: Interface
       VpcId: !Ref VPC
-
   LogsEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties: 
-      PolicyDocument: '{
-          "Statement": [
-              {
-                  "Action": "*",
-                  "Effect": "Allow",
-                  "Resource": "*",
-                  "Principal": "*"
-              }
-          ]
-        }'
       PrivateDnsEnabled: true
       SecurityGroupIds: 
         - !Ref EndpointSecurityGroup
@@ -184,21 +161,10 @@ Resources:
         - !Ref PrivateSubnetTwo
       VpcEndpointType: Interface
       VpcId: !Ref VPC
-
   ShotgunEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Condition: CreateShotgunEndpoint
     Properties: 
-      PolicyDocument: '{
-          "Statement": [
-              {
-                  "Action": "*",
-                  "Effect": "Allow",
-                  "Resource": "*",
-                  "Principal": "*"
-              }
-          ]
-        }'
       PrivateDnsEnabled: false
       SecurityGroupIds: 
         - !Ref EndpointSecurityGroup
