@@ -76,6 +76,12 @@ Resources:
           Id: HostedSiteRuleId
           MaxAge: '3000'
 Outputs:
-  BucketName:
+  S3BucketName:
     Value: !Ref 'S3Bucket'
-    Description: Name of the sample Amazon S3 bucket with CORS enabled.
+    Description: Name of the Amazon S3 bucket with CORS enabled.
+  AWSRegion:
+    Value: !Ref 'AWS::Region'
+    Description: AWS region
+  ShotgunRoleArn:
+    Value: !GetAtt 'SGCrossAccountRole.Arn'
+    Description: The Shotgun Role ARN 
