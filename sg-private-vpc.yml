@@ -1,25 +1,27 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: This stack deploys a private VPC needed for Shotgun Virtual Cloud.
-Mappings:
-  # Hard values for the subnet masks. These masks define
-  # the range of internal IP addresses that can be assigned.
-  # The VPC can have all IP's from 10.100.0.0 to 10.100.255.255
-  # There are two subnets which cover the ranges:
-  #
-  # 10.100.0.0 - 10.100.0.255
-  # 10.100.1.0 - 10.100.1.255
-  #
-  # If you need more IP addresses (perhaps you have so many
-  # instances that you run out) then you can customize these
-  # ranges to add more
-  SubnetConfig:
-    VPC:
-      CIDR: '10.100.0.0/16'
-    PrivateOne:
-      CIDR: '10.100.0.0/24'
-    PrivateTwo:
-      CIDR: '10.100.1.0/24'
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - Label: 
+          default: "Network Configuration"
+        Parameters: 
+          - VPCCIDR
+          - SubnetOneCIDR
+          - SubnetTwoCIDR
 Parameters:
+  VPCCIDR:
+    Description: The VPC CIDR block.
+    Default: '10.100.0.0/16'
+    Type: String
+  SubnetOneCIDR:
+    Description: Subnet One CIDR block.
+    Default: '10.100.0.0/24'
+    Type: String
+  SubnetTwoCIDR:
+    Description: Subnet Two CIDR block.
+    Default: '10.100.1.0/24'
+    Type: String
   CustomerBucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
     ConstraintDescription: Bucket name can include numbers, lowercase letters, uppercase letters, and hyphens. It
@@ -41,7 +43,7 @@ Resources:
     Properties:
       EnableDnsSupport: true
       EnableDnsHostnames: true
-      CidrBlock: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+      CidrBlock: !Ref 'VPCCIDR'
       Tags:
         - Key: Name
           Value: !Ref 'AWS::StackName'
@@ -57,7 +59,7 @@ Resources:
          - 0
          - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref 'VPC'
-      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateOne', 'CIDR']
+      CidrBlock: !Ref 'SubnetOneCIDR'
       Tags:
         - Key: Name
           Value: !Join [ '-', [ !Ref 'AWS::StackName', "PrivateSubnetOne" ]]
@@ -69,7 +71,7 @@ Resources:
          - 1
          - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref 'VPC'
-      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateTwo', 'CIDR']
+      CidrBlock: !Ref 'SubnetTwoCIDR'
       Tags:
         - Key: Name
           Value: !Join [ '-', [ !Ref 'AWS::StackName', "PrivateSubnetTwo" ]]
@@ -102,7 +104,7 @@ Resources:
       Description: Ingress from VPC
       GroupId: !Ref 'EndpointSecurityGroup'
       IpProtocol: -1
-      CidrIp: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+      CidrIp: !Ref 'VPCCIDR'
 
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
