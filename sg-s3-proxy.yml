@@ -36,6 +36,10 @@ Parameters:
     Type: Number
     Default: 2
     Description: How many copies of the service task to run
+  SecurityGroupCIDR:
+    Description: CIDR block allowed to access S3 proxy
+    Default: '10.0.0.0/8'
+    Type: String
 
 Resources:
 
@@ -55,6 +59,15 @@ Resources:
       GroupId: !Ref 'PrivateLoadBalancerSG'
       IpProtocol: -1
       SourceSecurityGroupId: !Ref 'FargateContainerSecurityGroup'
+  PrivateLoadBalancerIngressFromPrivateNetwork:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Accept https traffic from private network
+      GroupId: !Ref 'PrivateLoadBalancerSG'
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      CidrIp: !Ref 'SecurityGroupCIDR'
   PrivateLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
