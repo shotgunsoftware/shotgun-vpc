@@ -196,6 +196,26 @@ Resources:
           ContainerPort: !Ref 'ContainerPort'
           TargetGroupArn: !Ref 'TargetGroup'
 
+  # A target group. This is used for keeping track of all the tasks, and
+  # what IP addresses / port numbers they have. You can query it yourself,
+  # to use the addresses yourself, but most often this target group is just
+  # connected to an application load balancer, or network load balancer, so
+  # it can automatically distribute traffic across all the targets.
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /ping
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Name: !Ref 'AWS::StackName'
+      Port: !Ref 'ContainerPort'
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref 'VPC'
+
   ## AWS Global Accelerator in front of the load balancer
   Accelerator:
     Type: AWS::GlobalAccelerator::Accelerator
@@ -222,23 +242,3 @@ Resources:
       EndpointConfigurations:
       - EndpointId:
           Ref: PublicLoadBalancer
-
-  # A target group. This is used for keeping track of all the tasks, and
-  # what IP addresses / port numbers they have. You can query it yourself,
-  # to use the addresses yourself, but most often this target group is just
-  # connected to an application load balancer, or network load balancer, so
-  # it can automatically distribute traffic across all the targets.
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /ping
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
-      TargetType: ip
-      Name: !Ref 'AWS::StackName'
-      Port: !Ref 'ContainerPort'
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      VpcId: !Ref 'VPC'
