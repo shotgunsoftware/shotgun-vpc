@@ -196,6 +196,33 @@ Resources:
           ContainerPort: !Ref 'ContainerPort'
           TargetGroupArn: !Ref 'TargetGroup'
 
+  ## AWS Global Accelerator in front of the load balancer
+  Accelerator:
+    Type: AWS::GlobalAccelerator::Accelerator
+    Properties:
+      Name: S3Proxy
+      Enabled: true
+  Listener:
+    Type: AWS::GlobalAccelerator::Listener
+    Properties:
+      AcceleratorArn:
+        Ref: Accelerator
+      Protocol: TCP
+      PortRanges:
+      - FromPort: 443
+        ToPort: 443
+  EndpointGroup:
+    Type: AWS::GlobalAccelerator::EndpointGroup
+    Properties:
+      ListenerArn:
+        Ref: Listener
+      EndpointGroupRegion:
+        !Ref 'AWS::Region'
+      TrafficDialPercentage: 100
+      EndpointConfigurations:
+      - EndpointId:
+          Ref: PublicLoadBalancer
+
   # A target group. This is used for keeping track of all the tasks, and
   # what IP addresses / port numbers they have. You can query it yourself,
   # to use the addresses yourself, but most often this target group is just
