@@ -1,4 +1,4 @@
-# Shotgun Private Cloud AWS CloudFormation templates
+# Shotgun Isolation Feature Set AWS CloudFormation templates
 
 The latest version are available on direct on S3, see link below.
 
