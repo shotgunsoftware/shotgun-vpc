@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: This stack deploys a private VPC with a S3 privatelink needed for Shotgun Virtual Cloud.
+Description: This stack deploys a private VPC with PrivateLink for S3 needed for Shotgun Isolation.
 Metadata: 
   AWS::CloudFormation::Interface: 
     ParameterGroups: 
@@ -32,7 +32,7 @@ Parameters:
     Description: "OPTIONAL: Shotgun private service name for your AWS region if needed."
     Type: String
   SecurityGroupCIDR:
-    Description: CIDR block allowed to access S3 privatelink
+    Description: CIDR block allowed to access S3 PrivateLink
     Default: '10.0.0.0/8'
     Type: String
 Conditions:
@@ -96,7 +96,7 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnetTwo
 
-  # VPC EndPoint
+  # VPC Endpoint
   EndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
